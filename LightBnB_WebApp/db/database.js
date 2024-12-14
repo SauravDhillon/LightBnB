@@ -17,6 +17,9 @@ const pool = new Pool({
  * @return {Promise<{}>} A promise to the user.
  */
 const getUserWithEmail = function (email) {
+  if(!email){
+    return Promise.reject(new Error("Email is required"));
+  }
   return pool.query(`SELECT * FROM users
     WHERE email = $1;`, [email])
     .then((result) => {
@@ -38,6 +41,9 @@ const getUserWithEmail = function (email) {
  * @return {Promise<{}>} A promise to the user.
  */
 const getUserWithId = function (id) {
+  if (!id) {
+    return Promise.reject(new Error("ID is required"));
+  }
   return pool.query(`SELECT * FROM users
     WHERE id = $1;`, [id])
     .then((result) => {
@@ -84,7 +90,29 @@ const addUser = function (user) {
  * @return {Promise<[{}]>} A promise to the reservations.
  */
 const getAllReservations = function (guest_id, limit = 10) {
-  return getAllProperties(null, 2);
+  
+ return pool
+ .query(
+  `
+  SELECT reservations.*, 
+  properties.*,
+  AVG(property_reviews.rating) as average_rating
+FROM properties
+JOIN reservations ON properties.id = reservations.property_id
+JOIN property_reviews ON reservations.id = reservation_id
+WHERE reservations.guest_id = $1
+GROUP BY reservations.id, properties.id
+ORDER BY reservations.start_date ASC 
+LIMIT $2;
+`, [guest_id, limit])
+.then((result) => {
+  return result.rows;
+})
+.catch((err) => {
+  console.log(err.message);
+  throw err;
+});
+  
 };
 
 /// Properties
