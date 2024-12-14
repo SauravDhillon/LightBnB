@@ -158,31 +158,32 @@ if (options.maximum_price_per_night) {
   queryString += `${hasWhere ? ' AND' : ' WHERE'} cost_per_night <= $${queryParams.length}`;
   hasWhere = true;
 }
-
-if (options.minimum_rating) {
-  queryParams.push(options.minimum_rating);
-  queryString += `${hasWhere ? ' AND' : ' WHERE'} avg(property_reviews.rating) >= $${queryParams.length}`;
-}
-
-// Add GROUP BY, ORDER BY, and LIMIT clauses
-queryParams.push(limit);
+// Add GROUP BY clause
 queryString += `
-  GROUP BY properties.id
-  ORDER BY cost_per_night
-  LIMIT $${queryParams.length};
+GROUP BY properties.id
 `;
 
-  console.log(queryString, queryParams);
+// Add HAVING clause for aggregate filters
+if (options.minimum_rating) {
+queryParams.push(options.minimum_rating);
+queryString += ` HAVING avg(property_reviews.rating) >= $${queryParams.length}`;
+}
 
- return pool.query(queryString, queryParams)
-    .then((result) => {
-      //console.log(result.rows);
-       result.rows;
-    })
-    .catch((err) => {
-      console.log(err.message);
-    });
+// Add ORDER BY and LIMIT clauses
+queryParams.push(limit);
+queryString += `
+ORDER BY cost_per_night
+LIMIT $${queryParams.length};
+`;
 
+console.log(queryString, queryParams);
+
+// Execute query
+return pool.query(queryString, queryParams)
+.then((result) => {return result.rows})
+.catch((err) => {
+  console.log(err.message);
+});
 };
 
 /**
