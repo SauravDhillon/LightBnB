@@ -124,13 +124,12 @@ LIMIT $2;
  * @return {Promise<[{}]>}  A promise to the properties.
  */
 const getAllProperties = function (options, limit = 10) {
-// const {city, owner_id, minimum_price_per_night, maximum_price_per_night, minimum_rating} = options;
 
 const queryParams = [];
 
 let queryString = `SELECT properties.*, avg(property_reviews.rating) as average_rating
 FROM properties
-LEFT JOIN property_reviews ON properties.id = property_id
+JOIN property_reviews ON properties.id = property_id
 `;
 
 // Add filters dynamically
@@ -147,17 +146,15 @@ if (options.owner_id) {
   hasWhere = true;
 }
 
-if (options.minimum_price_per_night) {
-  queryParams.push(options.minimum_price_per_night * 100); // Convert dollars to cents
-  queryString += `${hasWhere ? ' AND' : ' WHERE'} cost_per_night >= $${queryParams.length}`;
-  hasWhere = true;
-}
 
-if (options.maximum_price_per_night) {
-  queryParams.push(options.maximum_price_per_night * 100); // Convert dollars to cents
-  queryString += `${hasWhere ? ' AND' : ' WHERE'} cost_per_night <= $${queryParams.length}`;
-  hasWhere = true;
-}
+  // Add price range filter only if both minimum and maximum price are provided
+  if (options.minimum_price_per_night && options.maximum_price_per_night) {
+    queryParams.push(options.minimum_price_per_night * 100); // Convert dollars to cents
+    queryParams.push(options.maximum_price_per_night * 100); // Convert dollars to cents
+    queryString += `${hasWhere ? ' AND' : ' WHERE'} cost_per_night BETWEEN $${queryParams.length - 1} AND $${queryParams.length}`;
+    hasWhere = true;
+  }
+  
 // Add GROUP BY clause
 queryString += `
 GROUP BY properties.id
